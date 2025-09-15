@@ -1,0 +1,23 @@
+# Dataflow Pipeline Dependencies
+# Python 3.12 compatible versions
+
+# Apache Beam for Dataflow (latest version compatible with Python 3.12)
+apache-beam[gcp]>=2.53.0
+
+# Google Cloud libraries
+google-cloud-pubsub>=2.18.0
+google-cloud-bigquery>=3.11.0
+google-cloud-storage>=2.10.0
+google-cloud-logging>=3.8.0
+
+# Data processing - Python 3.12 compatible
+pandas>=2.0.0
+numpy>=1.25.0
+
+# Utilities
+python-dateutil>=2.8.0
+pytz>=2023.0
+
+# Development and testing
+pytest>=7.4.0
+pytest-mock>=3.12.0
