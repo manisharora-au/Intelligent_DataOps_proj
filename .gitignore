@@ -1,0 +1,14 @@
+# Python virtual envs
+.venv/
+venv/
+__pycache__/
+
+# Terraform
+.terraform/
+terraform-provider-*
+
+# Node.js
+node_modules/
+
+# System
+.DS_Store
