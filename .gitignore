@@ -12,3 +12,8 @@ node_modules/
 
 # System
 .DS_Store
+
+# Terraform
+.terraform/
+terraform-provider-*
+

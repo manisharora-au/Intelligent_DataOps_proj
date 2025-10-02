@@ -135,11 +135,15 @@ class IoTDataGenerator:
             message_json = json.dumps(message)
             message_bytes = message_json.encode('utf-8')
             
-            # Publish to Pub/Sub
+            # Publish to Pub/Sub with timeout handling
             future = self.publisher.publish(self.topic_path, message_bytes)
-            future.result()  # Wait for publish to complete
             
-            print(f"Published message for vehicle {message.get('vehicle_id', 'unknown')}")
+            try:
+                future.result(timeout=10.0)  # Wait for publish to complete with 10s timeout
+                print(f"Published message for vehicle {message.get('vehicle_id', 'unknown')}")
+            except Exception as timeout_error:
+                print(f"Timeout publishing message for vehicle {message.get('vehicle_id', 'unknown')}: {timeout_error}")
+                # Message may still be published, just acknowledgment timed out
             
         except Exception as e:
             print(f"Error publishing message: {e}")
