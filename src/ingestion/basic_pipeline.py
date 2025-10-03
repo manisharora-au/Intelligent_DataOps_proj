@@ -194,6 +194,8 @@ def run_pipeline(argv=None):
     # Set pipeline options
     pipeline_options = PipelineOptions(pipeline_args)
     pipeline_options.view_as(beam.options.pipeline_options.StandardOptions).streaming = args.streaming
+    pipeline_options.view_as(beam.options.pipeline_options.GoogleCloudOptions).project = args.project
+    pipeline_options.view_as(beam.options.pipeline_options.GoogleCloudOptions).temp_location = args.temp_location
     
     # Create and run pipeline
     with beam.Pipeline(options=pipeline_options) as pipeline:
@@ -210,7 +212,7 @@ def run_pipeline(argv=None):
         parsed_messages = (
             messages
             | 'Parse Messages' >> beam.ParDo(ParsePubSubMessage()).with_outputs(
-                'valid', 'invalid', main='valid'
+                'valid', 'invalid'
             )
         )
         
