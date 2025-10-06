@@ -1,0 +1,15 @@
+# Security: Prevent accidental commits of sensitive files
+*.tfstate filter=git-crypt diff=git-crypt
+*.tfstate.backup filter=git-crypt diff=git-crypt
+*.tfvars filter=git-crypt diff=git-crypt
+*.key text=auto
+*.pem text=auto
+*id_rsa* text=auto
+*private* text=auto
+
+# Ensure line endings
+*.tf text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.sh text eol=lf
+*.json text eol=lf

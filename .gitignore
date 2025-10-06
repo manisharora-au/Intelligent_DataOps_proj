@@ -1,19 +1,88 @@
-# Python virtual envs
+# SECURITY: Terraform state files - contain sensitive data
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+terraform.tfstate.d/
+
+# SECURITY: Terraform variable files - may contain secrets  
+*.tfvars
+*.tfvars.json
+*.auto.tfvars
+terraform.tfvars
+
+# Terraform crash files and directories
+crash.log
+crash.*.log
+.terraform/
+.terraform.lock.hcl
+terraform-provider-*
+
+# SECURITY: Credentials and keys
+*.key
+*.pem
+*id_rsa*
+*id_dsa*
+*id_ecdsa*
+*id_ed25519*
+*.p12
+*.pfx
+service-account*.json
+*-key.json
+*credentials*.json
+
+# SECURITY: Environment files
+.env
+.env.*
+*.env
+!.env.example
+
+# SECURITY: Configuration files with potential secrets
+config.json
+secrets.yaml
+secrets.yml
+*secret*
+*password*
+*token*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 .venv/
 venv/
-__pycache__/
+env/
+ENV/
+env.bak/
+venv.bak/
 
-# Terraform
-.terraform/
-terraform-provider-*
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # Node.js
 node_modules/
 
-# System
+# OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Terraform
-.terraform/
-terraform-provider-*
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
 

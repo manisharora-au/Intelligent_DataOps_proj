@@ -1,0 +1,32 @@
+# Pre-commit hooks to prevent sensitive data commits
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package.lock.json
+        
+  - repo: https://github.com/terraform-docs/terraform-docs
+    rev: v0.16.0
+    hooks:
+      - id: terraform-docs-go
+        args: ["markdown", "table", "--output-file", "README.md", "./infrastructure"]
+
+  - repo: local
+    hooks:
+      - id: terraform-state-check
+        name: Prevent terraform state files
+        entry: sh -c 'if ls *.tfstate* 1> /dev/null 2>&1; then echo "ERROR: Terraform state files detected! These contain sensitive data."; exit 1; fi'
+        language: system
+        pass_filenames: false
