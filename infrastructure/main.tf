@@ -11,11 +11,12 @@ terraform {
   }
 }
 
-# Configure the Google Cloud Provider
+# Configure the Google Cloud Provider with Service Account
 provider "google" {
-  project = var.project_id
-  region  = var.region
-  zone    = var.zone
+  credentials = file(var.credentials_file)
+  project     = var.project_id
+  region      = var.region
+  zone        = var.zone
 }
 
 # Variables
@@ -41,6 +42,12 @@ variable "environment" {
   description = "Environment (dev/staging/prod)"
   type        = string
   default     = "dev"
+}
+
+variable "credentials_file" {
+  description = "Path to the service account credentials JSON file"
+  type        = string
+  default     = "~/.gcp/credentials/terraform-dataops-key.json"
 }
 
 # Local values

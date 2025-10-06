@@ -1,0 +1,19 @@
+# Terraform Variables Example
+# Copy this file to terraform.tfvars and update with your values
+# DO NOT commit terraform.tfvars to git - it may contain sensitive data
+
+# GCP Project Configuration
+project_id = "manish-sandpit"
+region     = "us-central1"
+zone       = "us-central1-a"
+
+# Environment
+environment = "dev"
+
+# Service Account Credentials
+# Path to the service account JSON key file
+credentials_file = "~/.gcp/credentials/terraform-dataops-key.json"
+
+# Alternative: Use environment variable instead of file path
+# export GOOGLE_APPLICATION_CREDENTIALS="~/.gcp/credentials/terraform-dataops-key.json"
+# credentials_file = ""  # Leave empty to use environment variable
