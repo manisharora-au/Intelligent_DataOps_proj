@@ -117,29 +117,27 @@ Processing Failure → dead-letter topic → error-analysis-subscription → Deb
 
 ## **📊 Message Schema Design**
 
-### **IoT Telemetry Schema**
+### **IoT Telemetry Schema (Published to Pub/Sub)**
 ```json
 {
-  "message_id": "uuid",
-  "timestamp": "2025-10-02T01:55:56.942594Z",
-  "vehicle_id": "VH001",
+  "vehicle_id": "VH003",
   "device_type": "gps_tracker",
-  "location": {
-    "latitude": 41.8781,
-    "longitude": -87.6298
-  },
-  "metrics": {
-    "speed_kmh": 65.5,
-    "fuel_level": 75.2,
-    "engine_status": "running"
-  },
-  "metadata": {
-    "driver_id": "DR001",
-    "route_id": "RT007",
-    "data_quality": 0.95
-  }
+  "timestamp": "2025-10-03T06:30:00Z",
+  "latitude": 41.8891,
+  "longitude": -87.6198,
+  "speed_kmh": 87,
+  "fuel_level": 0.72,
+  "engine_status": "running",
+  "driver_id": "DR007",
+  "route_id": "RT014",
+  "odometer": 125847,
+  "temperature": 18,
+  "generated_at": "2025-10-03T06:30:00Z",
+  "data_source": "shell_script"
 }
 ```
+
+**Note:** This is the actual schema used by `test_data_generator.py` and `generate_test_data.sh`. The simplified nested structure shown previously was for illustration - the pipeline expects flat JSON structure for BigQuery compatibility.
 
 ### **Delivery Event Schema**  
 ```json

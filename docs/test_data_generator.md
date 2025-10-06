@@ -29,29 +29,42 @@ Vehicle Fleet Config → Message Generation → JSON Encoding → Pub/Sub Publis
 
 ## **📡 Message Structure**
 
-### **Core Telemetry Fields**
+### **Complete Generated JSON Schema**
 ```json
 {
-    "vehicle_id": "VH001",
+    "vehicle_id": "VH003",
     "device_type": "gps_tracker",
-    "timestamp": "2025-10-02T01:55:56.942594Z",
-    "latitude": 41.8781,
-    "longitude": -87.6298,
-    "speed_kmh": 65.5,
-    "fuel_level": 75.2,
-    "engine_status": "running"
+    "timestamp": "2025-10-03T06:30:00Z",
+    "latitude": 41.8891,
+    "longitude": -87.6198,
+    "speed_kmh": 87,
+    "fuel_level": 0.72,
+    "engine_status": "running",
+    "driver_id": "DR007",
+    "route_id": "RT014",
+    "odometer": 125847,
+    "temperature": 18,
+    "generated_at": "2025-10-03T06:30:00Z",
+    "data_source": "python_generator"
 }
 ```
 
-### **Extended Metadata**
-```json
-{
-    "driver_id": "DR001",
-    "route_id": "RT007",
-    "odometer": 151191,
-    "temperature": 25,
-    "generated_at": "2025-10-02T01:55:56.942594Z"
-}
+### **Field Descriptions**
+```yaml
+vehicle_id: "VH001-VH005" - Unique vehicle identifier
+device_type: "gps_tracker|obd_device|fuel_sensor" - IoT device type
+timestamp: ISO 8601 UTC timestamp - Event occurrence time
+latitude: Float - GPS latitude (-90 to 90)
+longitude: Float - GPS longitude (-180 to 180)
+speed_kmh: Integer 0-120 - Vehicle speed in kilometers per hour
+fuel_level: Float 0.0-1.0 - Fuel level as decimal percentage
+engine_status: "running|idle|off" - Current engine state
+driver_id: "DR001-DR010" - Assigned driver identifier
+route_id: "RT001-RT020" - Current route assignment
+odometer: Integer 50000-200000 - Vehicle mileage reading
+temperature: Integer -10 to 30 - Engine/ambient temperature in Celsius
+generated_at: ISO 8601 UTC timestamp - Message generation time
+data_source: "python_generator" - Source identification
 ```
 
 ## **🎲 Realistic Data Patterns**

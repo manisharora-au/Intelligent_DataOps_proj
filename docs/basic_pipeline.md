@@ -23,6 +23,43 @@ IoT Devices → Pub/Sub (iot-telemetry) → Dataflow Pipeline → BigQuery Table
 - **Dual output streams**: valid messages vs error records
 - **Graceful degradation** - continues processing despite individual message failures
 
+#### **Expected Input JSON Schema**
+```json
+{
+    "vehicle_id": "VH003",
+    "device_type": "gps_tracker",
+    "timestamp": "2025-10-03T06:30:00Z",
+    "latitude": 41.8891,
+    "longitude": -87.6198,
+    "speed_kmh": 87,
+    "fuel_level": 0.72,
+    "engine_status": "running",
+    "driver_id": "DR007",
+    "route_id": "RT014",
+    "odometer": 125847,
+    "temperature": 18
+}
+```
+
+#### **Pipeline Output Schema (Enriched)**
+```json
+{
+    "vehicle_id": "VH003",
+    "device_type": "gps_tracker", 
+    "timestamp": "2025-10-03T06:30:00Z",
+    "latitude": 41.8891,
+    "longitude": -87.6198,
+    "speed_kmh": 87,
+    "fuel_level": 0.72,
+    "engine_status": "running",
+    "processed_at": "2025-10-03T06:30:15Z",
+    "data_quality_score": 0.875,
+    "location_valid": true,
+    "speed_category": "fast",
+    "raw_data": "{\"vehicle_id\":\"VH003\",...}"
+}
+```
+
 ### **3. Data Enrichment**
 - **Data quality scoring** - calculates completeness percentage (0-1.0)
 - **Geospatial validation** - validates GPS coordinates within realistic bounds

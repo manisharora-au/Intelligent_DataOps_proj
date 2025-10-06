@@ -18,25 +18,59 @@ BigQuery Project: manish-sandpit
 
 ## **📊 Core Tables Schema**
 
-### **iot_telemetry Table**
+### **iot_telemetry Table (Pipeline Enriched)**
 ```sql
 CREATE TABLE `intelligent_dataops_analytics.iot_telemetry` (
-  timestamp TIMESTAMP NOT NULL OPTIONS(description="Event timestamp"),
+  -- Original IoT data fields
+  timestamp TIMESTAMP NOT NULL OPTIONS(description="Event timestamp from device"),
   vehicle_id STRING NOT NULL OPTIONS(description="Vehicle identifier"), 
   device_type STRING NOT NULL OPTIONS(description="IoT device type"),
   latitude FLOAT OPTIONS(description="GPS latitude"),
   longitude FLOAT OPTIONS(description="GPS longitude"),
   speed_kmh FLOAT OPTIONS(description="Vehicle speed in km/h"),
-  fuel_level FLOAT OPTIONS(description="Fuel level percentage"),
-  engine_status STRING OPTIONS(description="Engine status"),
-  raw_data JSON OPTIONS(description="Raw telemetry data")
+  fuel_level FLOAT OPTIONS(description="Fuel level as decimal (0.0-1.0)"),
+  engine_status STRING OPTIONS(description="Engine status: running/idle/off"),
+  driver_id STRING OPTIONS(description="Assigned driver identifier"),
+  route_id STRING OPTIONS(description="Current route identifier"),
+  odometer INT64 OPTIONS(description="Vehicle odometer reading"),
+  temperature INT64 OPTIONS(description="Engine/ambient temperature"),
+  
+  -- Pipeline enriched fields
+  processed_at TIMESTAMP NOT NULL OPTIONS(description="Pipeline processing timestamp"),
+  data_quality_score FLOAT OPTIONS(description="Data completeness score (0.0-1.0)"),
+  location_valid BOOLEAN OPTIONS(description="GPS coordinates validation result"),
+  speed_category STRING OPTIONS(description="Speed classification: stationary/slow/moderate/fast/very_fast"),
+  raw_data JSON OPTIONS(description="Original raw telemetry JSON")
 )
 PARTITION BY DATE(timestamp)
 CLUSTER BY vehicle_id, device_type
 OPTIONS(
-  description="Vehicle IoT telemetry data from fleet devices",
+  description="Vehicle IoT telemetry data enriched by Dataflow pipeline",
   labels=[("environment", "dev"), ("phase", "1-foundation")]
 );
+```
+
+#### **Sample Enriched Record**
+```json
+{
+  "timestamp": "2025-10-03T06:30:00Z",
+  "vehicle_id": "VH003",
+  "device_type": "gps_tracker",
+  "latitude": 41.8891,
+  "longitude": -87.6198,
+  "speed_kmh": 87.0,
+  "fuel_level": 0.72,
+  "engine_status": "running",
+  "driver_id": "DR007",
+  "route_id": "RT014",
+  "odometer": 125847,
+  "temperature": 18,
+  "processed_at": "2025-10-03T06:30:15Z",
+  "data_quality_score": 0.875,
+  "location_valid": true,
+  "speed_category": "fast",
+  "raw_data": "{\"vehicle_id\":\"VH003\",\"device_type\":\"gps_tracker\",...}"
+}
 ```
 
 **Optimization Features:**
