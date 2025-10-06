@@ -117,7 +117,7 @@ Processing Failure → dead-letter topic → error-analysis-subscription → Deb
 
 ## **📊 Message Schema Design**
 
-### **IoT Telemetry Schema (Published to Pub/Sub)**
+### **IoT Telemetry Schema published by `test_data_generator.py` and `generate_test_data.sh` to Pub/Sub topic `iot-telemetry`**
 ```json
 {
   "vehicle_id": "VH003",

@@ -23,7 +23,7 @@ IoT Devices → Pub/Sub (iot-telemetry) → Dataflow Pipeline → BigQuery Table
 - **Dual output streams**: valid messages vs error records
 - **Graceful degradation** - continues processing despite individual message failures
 
-#### **Expected Input JSON Schema**
+#### **Expected Input JSON Schema from Pub/Sub topic `iot-telemetry` to pipeline `basic_pipeline.py`**
 ```json
 {
     "vehicle_id": "VH003",
@@ -41,7 +41,7 @@ IoT Devices → Pub/Sub (iot-telemetry) → Dataflow Pipeline → BigQuery Table
 }
 ```
 
-#### **Pipeline Output Schema (Enriched)**
+#### **Pipeline Output Schema from `basic_pipeline.py` to BigQuery table `iot_telemetry.telemetry_data`**
 ```json
 {
     "vehicle_id": "VH003",

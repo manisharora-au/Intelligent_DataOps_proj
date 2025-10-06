@@ -50,7 +50,7 @@ OPTIONS(
 );
 ```
 
-#### **Sample Enriched Record**
+#### **Sample Enriched Record stored in BigQuery table `manish-sandpit:iot_telemetry.telemetry_data`**
 ```json
 {
   "timestamp": "2025-10-03T06:30:00Z",
