@@ -30,6 +30,11 @@ service-account*.json
 *-key.json
 *credentials*.json
 
+# SECURITY: GCP credential directories
+.gcp/
+**/.gcp/
+~/.gcp/
+
 # SECURITY: Environment files
 .env
 .env.*
