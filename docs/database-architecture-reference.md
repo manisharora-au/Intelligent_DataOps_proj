@@ -8,8 +8,15 @@ The Intelligent DataOps Platform uses a **polyglot persistence architecture** wi
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    DATA INGESTION LAYER                        │
+│                    AUTHENTICATION LAYER                        │
 ├─────────────────────────────────────────────────────────────────┤
+│  Firebase Authentication ──→ JWT Tokens ──→ Custom Claims      │
+│  • User Registration/Login  • OAuth Providers  • Session Mgmt  │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+┌─────────────────────────────┼───────────────────────────────────┐
+│                    DATA INGESTION LAYER                        │
+├─────────────────────────────┼───────────────────────────────────┤
 │  Pub/Sub Topics ──→ Dataflow Pipelines ──→ Multiple Outputs    │
 └─────────┬──────────────────┬──────────────────┬─────────────────┘
           │                  │                  │
@@ -17,26 +24,31 @@ The Intelligent DataOps Platform uses a **polyglot persistence architecture** wi
 ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
 │   BigQuery      │ │   Firestore     │ │   Cloud SQL     │
 │                 │ │                 │ │                 │
-│ • Analytics     │ │ • Real-time     │ │ • Operational   │
-│ • Reporting     │ │ • Live Tracking │ │ • User Mgmt     │
+│ • Analytics     │ │ • Real-time     │ │ • Business      │
+│ • Reporting     │ │ • Live Tracking │ │   Profiles      │
 │ • ML Training   │ │ • Notifications │ │ • Configuration │
 │ • Long-term     │ │ • Dashboard     │ │ • Transactions  │
 │   Storage       │ │   Updates       │ │ • Business Logic│
 └─────────────────┘ └─────────────────┘ └─────────────────┘
+                              ▲                  ▲
+                              │                  │
+                    ┌─────────┴──────────────────┴─────────┐
+                    │     Firebase UID Links All Data     │
+                    └──────────────────────────────────────┘
 ```
 
 ## **📊 Database Comparison Matrix**
 
-| Aspect | BigQuery | Firestore | Cloud SQL |
-|--------|----------|-----------|-----------|
-| **Primary Use Case** | Analytics & Reporting | Real-time Operations | Transactional Data |
-| **Data Model** | Columnar/Analytical | Document/NoSQL | Relational/SQL |
-| **Query Language** | SQL | NoSQL/JavaScript | SQL |
-| **Consistency** | Eventually Consistent | Eventually Consistent | ACID Compliant |
-| **Scalability** | Petabyte Scale | Auto-scaling | Vertical/Read Replicas |
-| **Real-time Updates** | Batch/Streaming | Sub-second | Immediate |
-| **Cost Model** | Pay-per-query | Pay-per-operation | Fixed instance cost |
-| **Best For** | Complex analytics | Live dashboards | Complex relationships |
+| Aspect | Firebase Auth | BigQuery | Firestore | Cloud SQL |
+|--------|---------------|----------|-----------|-----------|
+| **Primary Use Case** | Authentication | Analytics & Reporting | Real-time Operations | Business Data |
+| **Data Model** | User Auth/Claims | Columnar/Analytical | Document/NoSQL | Relational/SQL |
+| **Query Language** | SDK/REST API | SQL | NoSQL/JavaScript | SQL |
+| **Consistency** | Strong | Eventually Consistent | Eventually Consistent | ACID Compliant |
+| **Scalability** | Automatic | Petabyte Scale | Auto-scaling | Vertical/Read Replicas |
+| **Real-time Updates** | Immediate | Batch/Streaming | Sub-second | Immediate |
+| **Cost Model** | Pay-per-use | Pay-per-query | Pay-per-operation | Fixed instance cost |
+| **Best For** | User management | Complex analytics | Live dashboards | Business relationships |
 
 ## **🔄 Data Flow Patterns**
 
@@ -64,21 +76,24 @@ vehicles.vehicle_identifier = "VH001"
 iot_telemetry.vehicle_id = "VH001"
 ```
 
-#### **User and Delivery Relationships**
-```sql
--- Cloud SQL: User management
-users.user_id = "uuid-123"
-drivers.user_id = "uuid-123"
+#### **User and Delivery Relationships (Firebase Auth Integration)**
+```typescript
+// Firebase Auth: Primary user identity
+firebase.auth().currentUser.uid = "firebase-uid-abc123"
 
--- Firestore: Real-time delivery tracking
+// Cloud SQL: Business profile linked to Firebase UID
+user_profiles.firebase_uid = "firebase-uid-abc123"
+drivers.firebase_uid = "firebase-uid-abc123"
+
+// Firestore: Real-time delivery tracking
 /deliveries/DL-123 {
   assignment: {
-    driverId: "uuid-123"
+    driverFirebaseUid: "firebase-uid-abc123"
   }
 }
 
--- BigQuery: Historical delivery analytics
-deliveries.driver_id = "uuid-123"
+// BigQuery: Historical delivery analytics  
+deliveries.driver_firebase_uid = "firebase-uid-abc123"
 ```
 
 ## **📋 Schema Summary by Database**

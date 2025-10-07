@@ -4,13 +4,29 @@
 
 Firestore serves as the **real-time operational data store** for the Intelligent DataOps Platform. It provides sub-second read/write capabilities for live vehicle tracking, active delivery status, real-time notifications, and operational dashboards that require instant updates.
 
+## **🔐 Firebase Authentication Integration**
+
+All Firestore collections integrate with **Firebase Authentication** for user identification and access control:
+
+- **User Identity**: Firebase UID serves as the primary user identifier across all collections
+- **Security Rules**: Firebase Auth tokens enable fine-grained access control
+- **Custom Claims**: Business roles and permissions stored in Firebase custom claims
+- **Session Management**: Firebase handles all authentication state and token refresh
+
 ## **🔄 Real-time Architecture**
 
 ```
-Dataflow Pipeline ──→ Firestore Collections ──→ Real-time Subscriptions
-     │                      │                         │
-     └── BigQuery ←─────────┘                         └──→ Frontend Dashboard
-         (Analytics)                                       (Live Updates)
+Firebase Auth ──→ JWT Tokens ──→ Security Rules ──→ Authorized Access
+     │                                                       │
+     └── Custom Claims (roles/permissions)                   ▼
+                                                    ┌─────────────────┐
+Dataflow Pipeline ──→ Firestore Collections ──────│ Real-time       │
+     │                      │                     │ Subscriptions   │
+     └── BigQuery ←─────────┘                     └─────────┬───────┘
+         (Analytics)                                        │
+                                                           ▼
+                                                  Frontend Dashboard
+                                                  (Live Updates)
 ```
 
 ## **📄 Collection Structure**
@@ -68,7 +84,7 @@ interface VehicleDocument {
       lastUpdate: FirebaseFirestore.Timestamp;
     };
     assignment: {
-      driverId?: string;
+      driverFirebaseUid?: string;
       currentRouteId?: string;
       currentDeliveryId?: string;
       nextStopETA?: FirebaseFirestore.Timestamp;
@@ -119,7 +135,7 @@ interface VehicleDocument {
       "lastUpdate": "2025-10-07T10:30:00Z"
     },
     "assignment": {
-      "driverId": "DR007",
+      "driverFirebaseUid": "firebase-uid-dr007",
       "currentRouteId": "RT014",
       "currentDeliveryId": "DL-20251007-001",
       "nextStopETA": "2025-10-07T11:15:00Z"
@@ -149,7 +165,7 @@ interface VehicleDocument {
 interface TripDocument {
   tripId: string;
   vehicleId: string;
-  driverId: string;
+  driverFirebaseUid: string;
   routeId: string;
   
   // Trip Timeline
@@ -201,7 +217,7 @@ interface TripDocument {
 ```typescript
 interface DeliveryDocument {
   deliveryId: string;
-  customerId: string;
+  customerFirebaseUid: string;
   
   // Assignment
   assignment: {
@@ -333,7 +349,7 @@ interface StatusUpdateDocument {
 interface TrackingSessionDocument {
   sessionId: string;
   vehicleId: string;
-  driverId: string;
+  driverFirebaseUid: string;
   
   // Session Information
   session: {
@@ -618,7 +634,7 @@ service cloud.firestore {
       match /trips/{tripId} {
         allow read: if request.auth != null;
         allow write: if request.auth.token.role == 'driver' 
-                    && resource.data.driverId == request.auth.uid;
+                    && resource.data.driverFirebaseUid == request.auth.uid;
       }
     }
     
@@ -627,7 +643,7 @@ service cloud.firestore {
       allow read: if request.auth != null 
                   && (request.auth.token.role == 'admin'
                       || request.auth.token.role == 'driver'
-                      || resource.data.customerId == request.auth.uid);
+                      || resource.data.customerFirebaseUid == request.auth.uid);
       allow write: if request.auth.token.role == 'system' 
                    || request.auth.token.role == 'admin';
     }
@@ -636,7 +652,7 @@ service cloud.firestore {
     match /real_time_tracking/{sessionId} {
       allow read: if request.auth != null;
       allow write: if request.auth.token.role == 'driver'
-                   && resource.data.driverId == request.auth.uid;
+                   && resource.data.driverFirebaseUid == request.auth.uid;
     }
     
     // Operational state - read-only for most users

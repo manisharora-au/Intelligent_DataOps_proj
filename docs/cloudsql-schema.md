@@ -2,13 +2,22 @@
 
 ## **🎯 Purpose**
 
-Cloud SQL serves as the **operational relational database** for the Intelligent DataOps Platform. It manages user authentication, system configurations, business logic, and transactional data that requires ACID compliance, complex relationships, and SQL-based operations.
+Cloud SQL serves as the **operational relational database** for the Intelligent DataOps Platform. It manages business user profiles, system configurations, business logic, and transactional data that requires ACID compliance, complex relationships, and SQL-based operations.
+
+**Note**: Authentication is handled by **Firebase Authentication**. Cloud SQL stores only business-specific user metadata and relationships.
 
 ## **🏗️ Database Architecture**
 
 ```
+Authentication Layer: Firebase Authentication (Separate Service)
+├── User Registration & Login
+├── Password Management & Reset  
+├── OAuth Providers (Google, Apple, etc.)
+├── Session Management & JWT Tokens
+└── Multi-Factor Authentication
+
 Cloud SQL PostgreSQL Instance: intelligent-dataops-operational
-├── User Management & Authentication
+├── Business User Profiles (linked to Firebase UIDs)
 ├── System Configuration & Settings  
 ├── Business Logic & Rules
 ├── Integration & External Systems
@@ -22,56 +31,156 @@ Cloud SQL PostgreSQL Instance: intelligent-dataops-operational
 - **Backups**: Daily automated backups with 7-day retention
 - **High Availability**: Regional persistent disks with failover
 
-## **👥 User Management Schema**
+## **👥 Firebase Authentication Integration**
 
-### **users Table**
+### **Authentication Flow**
+```typescript
+// Firebase handles all authentication
+interface FirebaseUser {
+  uid: string;                    // Firebase UID (primary identifier)
+  email: string;                 // Managed by Firebase
+  displayName: string;           // Managed by Firebase
+  photoURL: string;              // Managed by Firebase
+  emailVerified: boolean;        // Managed by Firebase
+  disabled: boolean;             // Managed by Firebase
+  customClaims?: {               // Custom business claims
+    role: string;
+    department: string;
+    permissions: string[];
+  };
+}
+```
+
+### **user_profiles Table** (Business Metadata Only)
 ```sql
-CREATE TABLE users (
-    user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    username VARCHAR(100) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+CREATE TABLE user_profiles (
+    profile_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    firebase_uid VARCHAR(128) UNIQUE NOT NULL, -- Links to Firebase Auth UID
     
-    -- Profile Information
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    phone_number VARCHAR(20),
-    profile_image_url TEXT,
+    -- Business Information (not handled by Firebase)
+    employee_id VARCHAR(20) UNIQUE,
+    job_title VARCHAR(100),
+    hire_date DATE,
+    salary_grade VARCHAR(10),
     
-    -- Role and Permissions
+    -- Business Relationships
     role_id UUID NOT NULL REFERENCES roles(role_id),
     department_id UUID REFERENCES departments(department_id),
-    manager_id UUID REFERENCES users(user_id),
+    manager_firebase_uid VARCHAR(128) REFERENCES user_profiles(firebase_uid),
     
-    -- Account Status
-    account_status account_status_enum DEFAULT 'active',
-    email_verified BOOLEAN DEFAULT FALSE,
-    last_login_at TIMESTAMP WITH TIME ZONE,
-    password_changed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    -- Business Status (separate from Firebase account status)
+    employment_status employment_status_enum DEFAULT 'active',
+    work_location VARCHAR(100),
+    cost_center_code VARCHAR(20),
     
-    -- Security
-    failed_login_attempts INTEGER DEFAULT 0,
-    locked_until TIMESTAMP WITH TIME ZONE,
-    two_factor_enabled BOOLEAN DEFAULT FALSE,
-    two_factor_secret VARCHAR(32),
+    -- Business Contact (supplementary to Firebase)
+    work_phone VARCHAR(20),
+    emergency_contact_name VARCHAR(100),
+    emergency_contact_phone VARCHAR(20),
+    
+    -- Business Preferences
+    timezone VARCHAR(50) DEFAULT 'America/Chicago',
+    language_preference VARCHAR(5) DEFAULT 'en-US',
+    notification_preferences JSONB DEFAULT '{}',
     
     -- Audit
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_by UUID REFERENCES users(user_id),
-    updated_by UUID REFERENCES users(user_id)
+    created_by_firebase_uid VARCHAR(128),
+    updated_by_firebase_uid VARCHAR(128)
 );
 
 -- Enums
-CREATE TYPE account_status_enum AS ENUM ('active', 'inactive', 'suspended', 'pending_verification');
+CREATE TYPE employment_status_enum AS ENUM ('active', 'inactive', 'on_leave', 'terminated', 'contractor');
 
 -- Indexes
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_role_id ON users(role_id);
-CREATE INDEX idx_users_department_id ON users(department_id);
-CREATE INDEX idx_users_account_status ON users(account_status);
-CREATE INDEX idx_users_last_login ON users(last_login_at DESC);
+CREATE INDEX idx_user_profiles_firebase_uid ON user_profiles(firebase_uid);
+CREATE INDEX idx_user_profiles_employee_id ON user_profiles(employee_id);
+CREATE INDEX idx_user_profiles_role_id ON user_profiles(role_id);
+CREATE INDEX idx_user_profiles_department_id ON user_profiles(department_id);
+CREATE INDEX idx_user_profiles_employment_status ON user_profiles(employment_status);
+CREATE INDEX idx_user_profiles_manager ON user_profiles(manager_firebase_uid);
+
+-- Constraint to ensure Firebase UID format
+ALTER TABLE user_profiles ADD CONSTRAINT chk_firebase_uid_format 
+    CHECK (LENGTH(firebase_uid) >= 20 AND firebase_uid ~ '^[a-zA-Z0-9]+$');
 ```
+
+### **Firebase Auth + Cloud SQL Integration Patterns**
+```typescript
+// 1. User Registration Flow
+async function createUserProfile(firebaseUser: FirebaseUser, businessData: any) {
+  // Firebase handles authentication
+  const authUser = await admin.auth().createUser({
+    email: businessData.email,
+    displayName: `${businessData.firstName} ${businessData.lastName}`,
+    disabled: false
+  });
+  
+  // Cloud SQL stores business metadata
+  const profile = await pool.query(`
+    INSERT INTO user_profiles (
+      firebase_uid, employee_id, job_title, hire_date, 
+      role_id, department_id, employment_status
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING profile_id
+  `, [authUser.uid, businessData.employeeId, businessData.jobTitle, 
+      businessData.hireDate, businessData.roleId, businessData.departmentId, 'active']);
+  
+  // Set custom claims in Firebase for authorization
+  await admin.auth().setCustomUserClaims(authUser.uid, {
+    role: businessData.roleName,
+    department: businessData.departmentCode,
+    permissions: businessData.permissions
+  });
+  
+  return { firebaseUid: authUser.uid, profileId: profile.rows[0].profile_id };
+}
+
+// 2. User Login & Profile Retrieval
+async function getUserFullProfile(firebaseUid: string) {
+  // Get Firebase user data
+  const firebaseUser = await admin.auth().getUser(firebaseUid);
+  
+  // Get business profile from Cloud SQL
+  const profile = await pool.query(`
+    SELECT 
+      up.*,
+      r.role_name,
+      r.permissions,
+      d.department_name,
+      d.department_code
+    FROM user_profiles up
+    JOIN roles r ON up.role_id = r.role_id
+    LEFT JOIN departments d ON up.department_id = d.department_id
+    WHERE up.firebase_uid = $1
+  `, [firebaseUid]);
+  
+  return {
+    firebase: firebaseUser,
+    business: profile.rows[0]
+  };
+}
+```
+
+### **💰 Cost Benefits Analysis**
+
+**Firebase Authentication vs Cloud SQL Authentication:**
+
+| Factor | Firebase Auth | Cloud SQL Auth | Savings |
+|--------|---------------|----------------|---------|
+| **Monthly Fixed Cost** | $0 (pay-per-use) | $25-50 (db-f1-micro) | $25-50/month |
+| **Authentication Requests** | $0.006/1000 requests | Included in instance | Variable |
+| **Development Time** | ~2 weeks less | ~2 weeks more | $4,000-8,000 |
+| **Security Features** | Built-in (MFA, OAuth) | Custom implementation | $5,000-10,000 |
+| **Maintenance** | Managed by Google | Manual maintenance | $1,000-2,000/month |
+
+**Break-even Analysis:**
+- **Small Scale** (<10,000 auth/month): Firebase saves $25-50/month immediately
+- **Medium Scale** (10k-100k auth/month): Firebase saves $20-45/month + dev costs
+- **Large Scale** (>100k auth/month): Firebase costs ~$60/month vs $50 fixed Cloud SQL
+
+**Recommendation**: Use Firebase Auth for authentication, Cloud SQL for business data.
 
 ### **roles Table**
 ```sql
@@ -131,7 +240,7 @@ CREATE TABLE departments (
     department_path TEXT, -- Materialized path for hierarchy queries
     
     -- Manager
-    manager_id UUID REFERENCES users(user_id),
+    manager_firebase_uid VARCHAR(128) REFERENCES user_profiles(firebase_uid),
     
     -- Settings
     budget_allocation DECIMAL(15,2),
@@ -159,7 +268,7 @@ INSERT INTO departments (department_name, department_code, description) VALUES
 ```sql
 CREATE TABLE drivers (
     driver_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID UNIQUE NOT NULL REFERENCES users(user_id),
+    firebase_uid VARCHAR(128) UNIQUE NOT NULL REFERENCES user_profiles(firebase_uid),
     employee_id VARCHAR(20) UNIQUE NOT NULL,
     
     -- License Information
@@ -201,7 +310,7 @@ CREATE TABLE drivers (
 CREATE TYPE employment_status_enum AS ENUM ('active', 'inactive', 'on_leave', 'terminated');
 
 -- Indexes
-CREATE INDEX idx_drivers_user_id ON drivers(user_id);
+CREATE INDEX idx_drivers_firebase_uid ON drivers(firebase_uid);
 CREATE INDEX idx_drivers_employment_status ON drivers(employment_status);
 CREATE INDEX idx_drivers_license_expiry ON drivers(license_expiry_date);
 CREATE INDEX idx_drivers_current_vehicle ON drivers(current_vehicle_id);
@@ -299,7 +408,7 @@ CREATE TABLE depots (
     is_24_hour BOOLEAN DEFAULT FALSE,
     
     -- Manager
-    manager_id UUID REFERENCES users(user_id),
+    manager_firebase_uid VARCHAR(128) REFERENCES user_profiles(firebase_uid),
     
     -- Contact Information
     phone_number VARCHAR(20),
@@ -348,7 +457,7 @@ CREATE TABLE system_configurations (
     -- Audit
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_by UUID REFERENCES users(user_id)
+    updated_by_firebase_uid VARCHAR(128)
 );
 
 CREATE TYPE config_type_enum AS ENUM ('string', 'integer', 'decimal', 'boolean', 'json', 'array');
@@ -413,7 +522,7 @@ CREATE TABLE notification_templates (
     -- Audit
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_by UUID REFERENCES users(user_id)
+    updated_by_firebase_uid VARCHAR(128)
 );
 
 -- Enums
@@ -506,7 +615,7 @@ CREATE TABLE api_logs (
     response_time_ms INTEGER,
     
     -- Context
-    user_id UUID REFERENCES users(user_id),
+    firebase_uid VARCHAR(128) REFERENCES user_profiles(firebase_uid),
     correlation_id UUID, -- For tracing across systems
     operation_type VARCHAR(50),
     
@@ -538,7 +647,7 @@ CREATE TABLE audit_trails (
     audit_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- Actor Information
-    user_id UUID REFERENCES users(user_id),
+    firebase_uid VARCHAR(128) REFERENCES user_profiles(firebase_uid),
     session_id VARCHAR(255),
     ip_address INET,
     user_agent TEXT,
