@@ -1,5 +1,8 @@
 # Intelligent DataOps Platform - Architecture Blueprint
 
+![Architecture Blueprint](./architecture-blueprint.png)
+*Visual architecture diagram showing the complete Intelligent DataOps Platform with data flow, processing layers, and AI/ML components.*
+
 ## System Overview
 
 This blueprint describes the architecture for an AI-powered real-time decisioning platform that combines MLOps, DataOps, and Agentic AI Orchestration for logistics and supply chain operations.
