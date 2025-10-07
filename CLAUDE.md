@@ -17,9 +17,28 @@ Vision: An end-to-end AI-powered cloud platform that ingests diverse data in rea
 ## Development Commands
 
 ### Python Development
+
+**Virtual Environment Setup:**
 ```bash
+# ALWAYS check for existing virtual environments first
+find . -name "*venv*" -type d -maxdepth 2
+
+# Use the project-level virtual environment (preferred)
+source venv_dataops/bin/activate
+
+# If venv_dataops doesn't exist, create it at project root
+cd /Users/manisharora/Projects/Intelligent_DataOps_proj
+python3 -m venv venv_dataops
+source venv_dataops/bin/activate
+
 # Install dependencies
-pip install -r requirements.txt
+pip install -r src/ingestion/requirements.txt
+```
+
+**Development Commands:**
+```bash
+# Activate environment (run from project root)
+source venv_dataops/bin/activate
 
 # Run linting
 flake8 .
@@ -37,6 +56,23 @@ pytest -k "test_name"          # Run specific test by name
 
 # Type checking
 mypy .
+```
+
+**Data Generator Testing:**
+```bash
+# Activate environment and set credentials
+source venv_dataops/bin/activate
+export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.gcp/credentials/terraform-dataops-key.json"
+
+# Test shell generator (5 messages)
+cd src/ingestion
+./generate_test_data.sh 5
+
+# Test Python generator (3 messages)
+python test_data_generator.py --project manish-sandpit --topic iot-telemetry --batch-size 3
+
+# Verify messages
+gcloud pubsub subscriptions pull iot-telemetry-subscription --limit=3 --auto-ack
 ```
 
 ### GCP Development
