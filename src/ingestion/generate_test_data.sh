@@ -59,8 +59,8 @@ EOF
 
     echo "📤 Publishing message $i for vehicle $VEHICLE..."
     
-    # Publish using gcloud (this actually works)
-    echo "$MESSAGE" | gcloud pubsub topics publish $TOPIC --message=-
+    # Publish using gcloud with direct message parameter
+    gcloud pubsub topics publish $TOPIC --message="$MESSAGE"
     
     if [ $? -eq 0 ]; then
         echo "✅ Message $i published successfully"
