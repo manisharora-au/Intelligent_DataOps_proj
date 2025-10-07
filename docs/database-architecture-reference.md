@@ -358,6 +358,88 @@ LEFT JOIN driver_info di ON av.assigned_driver_id = di.driver_id;
 
 ## **🔒 Security & Access Control**
 
+### **Access Control Architecture Overview**
+
+![Access Control Architecture](./Access_Control_Architecture.png)
+
+The platform implements a **comprehensive multi-layered security architecture** with Firebase Authentication as the central identity provider, integrating OAuth providers and custom role-based access control across all database systems.
+
+### **Security Flow Components**
+
+1. **Authentication Layer**
+   - OAuth providers (Google, GitHub) for secure login
+   - Firebase Authentication & Identity Platform
+   - JWT token generation with custom claims
+   - Session management and token refresh
+
+2. **Authorization Layer**
+   - Firebase Auth SDK with role-based permissions
+   - Custom claims for business roles and permissions
+   - Backend API/microservices JWT verification
+   - Database-specific access control enforcement
+
+3. **Database Security**
+   - **BigQuery**: Row-level security with service account permissions
+   - **Firestore**: Real-time security rules with Firebase Auth integration
+   - **Cloud SQL**: Role-based access policies with Firebase UID references
+
+4. **Monitoring & Compliance**
+   - Comprehensive audit logging for all access attempts
+   - Real-time monitoring of authorized and unauthorized access
+   - Alert system for security violations
+
+### **Complete Security Flow**
+
+```mermaid
+sequenceDiagram
+    participant User as User Interface
+    participant OAuth as OAuth Providers
+    participant Firebase as Firebase Auth
+    participant Backend as Backend API
+    participant BQ as BigQuery
+    participant FS as Firestore
+    participant SQL as Cloud SQL
+    participant Audit as Audit Logs
+
+    User->>OAuth: 1. Login Request
+    OAuth->>Firebase: 2. OAuth Token
+    Firebase->>Firebase: 3. Verify & Generate JWT
+    Firebase->>User: 4. JWT with Custom Claims
+    
+    User->>Backend: 5. API Request + JWT
+    Backend->>Backend: 6. Verify JWT & Extract Claims
+    Backend->>Backend: 7. Evaluate Permissions
+    
+    alt BigQuery Access
+        Backend->>BQ: 8a. Query with Service Account
+        BQ->>BQ: Row-level Security Check
+        BQ->>Backend: Results
+    else Firestore Access
+        Backend->>FS: 8b. Request with Auth Context
+        FS->>FS: Security Rules Evaluation
+        FS->>Backend: Real-time Data
+    else Cloud SQL Access
+        Backend->>SQL: 8c. Query with User Context
+        SQL->>SQL: Role-based Access Policy
+        SQL->>Backend: Business Data
+    end
+    
+    Backend->>Audit: 9. Log Access Attempt
+    Backend->>User: 10. Authorized Response
+```
+
+### **Role-Based Access Control (RBAC)**
+
+Based on the architecture diagram, the system implements these access levels:
+
+| Role | Firebase Claims | BigQuery Access | Firestore Access | Cloud SQL Access |
+|------|----------------|-----------------|------------------|------------------|
+| **Super Admin** | `{role: 'super_admin', permissions: ['*']}` | Full access | Full access | Full access |
+| **Fleet Manager** | `{role: 'fleet_manager', dept: 'operations'}` | Fleet analytics | Vehicle/driver data | Fleet management tables |
+| **Dispatcher** | `{role: 'dispatcher', permissions: ['delivery.*']}` | Delivery reports | Delivery tracking | Route management |
+| **Driver** | `{role: 'driver', vehicle: 'VH001'}` | Own performance | Assigned deliveries | Own profile data |
+| **Customer** | `{role: 'customer', customer_id: 'uid'}` | None | Own deliveries | None |
+
 ### **Database-Specific Security**
 
 #### **BigQuery Security**
