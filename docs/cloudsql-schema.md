@@ -35,7 +35,7 @@ Cloud SQL PostgreSQL Instance: intelligent-dataops-operational
 
 ### **Authentication Flow**
 ```typescript
-// Firebase handles all authentication
+// Firebase raw authentication data
 interface FirebaseUser {
   uid: string;                    // Firebase UID (primary identifier)
   email: string;                 // Managed by Firebase
@@ -43,12 +43,36 @@ interface FirebaseUser {
   photoURL: string;              // Managed by Firebase
   emailVerified: boolean;        // Managed by Firebase
   disabled: boolean;             // Managed by Firebase
-  customClaims?: {               // Custom business claims
-    role: string;
-    department: string;
-    permissions: string[];
-  };
+  customClaims?: Record<string, any>; // Raw Firebase claims (generic)
 }
+
+// Business-focused user interface for our application
+interface AuthenticatedUser {
+  firebaseUid: string;
+  email: string;
+  displayName: string;
+  emailVerified: boolean;
+  
+  // Clear business-specific properties
+  businessRole: UserRole;
+  permissions: Permission[];
+  organizationalAccess: OrganizationalAccess;
+  
+  // Keep reference to raw Firebase data for debugging
+  _rawFirebaseData?: FirebaseUser;
+}
+
+interface OrganizationalAccess {
+  department?: string;
+  fleetAssignment?: string[];
+  vehicleAccess?: string[];
+  routeAccess?: string[];
+  managerId?: string;
+  costCenter?: string;
+}
+
+type UserRole = 'super_admin' | 'fleet_manager' | 'dispatcher' | 'driver' | 'customer' | 'analyst';
+type Permission = 'fleet.read' | 'fleet.write' | 'delivery.read' | 'delivery.write' | 'analytics.read' | 'system.admin';
 ```
 
 ### **user_profiles Table** (Business Metadata Only)
@@ -108,42 +132,46 @@ ALTER TABLE user_profiles ADD CONSTRAINT chk_firebase_uid_format
 
 ### **Firebase Auth + Cloud SQL Integration Patterns**
 ```typescript
-// 1. User Registration Flow
-async function createUserProfile(firebaseUser: FirebaseUser, businessData: any) {
-  // Firebase handles authentication
-  const authUser = await admin.auth().createUser({
-    email: businessData.email,
-    displayName: `${businessData.firstName} ${businessData.lastName}`,
+// 1. User Registration Flow with Business Role Assignment
+async function createUserWithBusinessProfile(registrationData: RegistrationData): Promise<AuthenticatedUser> {
+  // Step 1: Create Firebase user account
+  const firebaseUser = await admin.auth().createUser({
+    email: registrationData.email,
+    displayName: `${registrationData.firstName} ${registrationData.lastName}`,
     disabled: false
   });
   
-  // Cloud SQL stores business metadata
-  const profile = await pool.query(`
+  // Step 2: Store business metadata in Cloud SQL
+  const businessProfile = await pool.query(`
     INSERT INTO user_profiles (
       firebase_uid, employee_id, job_title, hire_date, 
       role_id, department_id, employment_status
     ) VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING profile_id
-  `, [authUser.uid, businessData.employeeId, businessData.jobTitle, 
-      businessData.hireDate, businessData.roleId, businessData.departmentId, 'active']);
+  `, [firebaseUser.uid, registrationData.employeeId, registrationData.jobTitle, 
+      registrationData.hireDate, registrationData.roleId, registrationData.departmentId, 'active']);
   
-  // Set custom claims in Firebase for authorization
-  await admin.auth().setCustomUserClaims(authUser.uid, {
-    role: businessData.roleName,
-    department: businessData.departmentCode,
-    permissions: businessData.permissions
-  });
+  // Step 3: Set business role and permissions in Firebase for authorization
+  const businessClaims = {
+    role: registrationData.businessRole,
+    department: registrationData.departmentCode,
+    permissions: registrationData.permissions,
+    fleetAssignment: registrationData.fleetAssignment,
+    vehicleAccess: registrationData.vehicleAccess
+  };
   
-  return { firebaseUid: authUser.uid, profileId: profile.rows[0].profile_id };
+  await admin.auth().setCustomUserClaims(firebaseUser.uid, businessClaims);
+  
+  return mapToAuthenticatedUser(firebaseUser, businessClaims, businessProfile.rows[0]);
 }
 
-// 2. User Login & Profile Retrieval
-async function getUserFullProfile(firebaseUid: string) {
-  // Get Firebase user data
+// 2. User Authentication & Complete Profile Retrieval
+async function authenticateAndLoadBusinessProfile(firebaseUid: string): Promise<AuthenticatedUser> {
+  // Get Firebase authentication data
   const firebaseUser = await admin.auth().getUser(firebaseUid);
   
-  // Get business profile from Cloud SQL
-  const profile = await pool.query(`
+  // Get complete business profile from Cloud SQL
+  const businessData = await pool.query(`
     SELECT 
       up.*,
       r.role_name,
@@ -153,13 +181,56 @@ async function getUserFullProfile(firebaseUid: string) {
     FROM user_profiles up
     JOIN roles r ON up.role_id = r.role_id
     LEFT JOIN departments d ON up.department_id = d.department_id
-    WHERE up.firebase_uid = $1
+    WHERE up.firebase_uid = $1 AND up.employment_status = 'active'
   `, [firebaseUid]);
   
+  if (businessData.rows.length === 0) {
+    throw new Error('Business profile not found or inactive');
+  }
+  
+  return mapToAuthenticatedUser(firebaseUser, firebaseUser.customClaims, businessData.rows[0]);
+}
+
+// 3. Mapping Firebase data to business-focused interface
+function mapToAuthenticatedUser(
+  firebaseUser: admin.auth.UserRecord, 
+  businessClaims: any, 
+  businessProfile: any
+): AuthenticatedUser {
   return {
-    firebase: firebaseUser,
-    business: profile.rows[0]
+    firebaseUid: firebaseUser.uid,
+    email: firebaseUser.email!,
+    displayName: firebaseUser.displayName || '',
+    emailVerified: firebaseUser.emailVerified,
+    
+    businessRole: businessClaims?.role as UserRole,
+    permissions: businessClaims?.permissions || [],
+    organizationalAccess: {
+      department: businessProfile.department_name,
+      fleetAssignment: businessClaims?.fleetAssignment || [],
+      vehicleAccess: businessClaims?.vehicleAccess || [],
+      managerId: businessProfile.manager_firebase_uid,
+      costCenter: businessProfile.cost_center_code
+    },
+    
+    _rawFirebaseData: firebaseUser
   };
+}
+
+interface RegistrationData {
+  email: string;
+  firstName: string;
+  lastName: string;
+  employeeId: string;
+  jobTitle: string;
+  hireDate: string;
+  roleId: string;
+  departmentId: string;
+  businessRole: UserRole;
+  departmentCode: string;
+  permissions: Permission[];
+  fleetAssignment?: string[];
+  vehicleAccess?: string[];
 }
 ```
 

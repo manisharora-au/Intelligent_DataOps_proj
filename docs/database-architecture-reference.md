@@ -140,11 +140,13 @@ Detailed in: [`docs/firestore-schema.md`](./firestore-schema.md)
 Detailed in: [`docs/cloudsql-schema.md`](./cloudsql-schema.md)
 
 **Core Tables:**
-- **User Management**: `users`, `roles`, `departments`
+- **Business User Profiles**: `user_profiles`, `roles`, `departments`
 - **Fleet Management**: `drivers`, `vehicle_fleet`, `depots`
 - **System Configuration**: `system_configurations`, `notification_templates`
 - **External Integration**: `external_systems`, `api_logs`
 - **Audit & Compliance**: `audit_trails`
+
+**Note**: Authentication is handled by Firebase Auth. Cloud SQL stores only business-specific user metadata linked via Firebase UIDs.
 
 **Key Features:**
 - ACID transactions for data integrity
@@ -432,13 +434,13 @@ sequenceDiagram
 
 Based on the architecture diagram, the system implements these access levels:
 
-| Role | Firebase Claims | BigQuery Access | Firestore Access | Cloud SQL Access |
-|------|----------------|-----------------|------------------|------------------|
-| **Super Admin** | `{role: 'super_admin', permissions: ['*']}` | Full access | Full access | Full access |
-| **Fleet Manager** | `{role: 'fleet_manager', dept: 'operations'}` | Fleet analytics | Vehicle/driver data | Fleet management tables |
-| **Dispatcher** | `{role: 'dispatcher', permissions: ['delivery.*']}` | Delivery reports | Delivery tracking | Route management |
-| **Driver** | `{role: 'driver', vehicle: 'VH001'}` | Own performance | Assigned deliveries | Own profile data |
-| **Customer** | `{role: 'customer', customer_id: 'uid'}` | None | Own deliveries | None |
+| Role | Business Role Claims | BigQuery Access | Firestore Access | Cloud SQL Access |
+|------|---------------------|-----------------|------------------|------------------|
+| **Super Admin** | `{businessRole: 'super_admin', permissions: ['system.*']}` | Full access | Full access | Full access |
+| **Fleet Manager** | `{businessRole: 'fleet_manager', organizationalAccess: {department: 'operations'}}` | Fleet analytics | Vehicle/driver data | Fleet management tables |
+| **Dispatcher** | `{businessRole: 'dispatcher', permissions: ['delivery.read', 'delivery.write']}` | Delivery reports | Delivery tracking | Route management |
+| **Driver** | `{businessRole: 'driver', organizationalAccess: {vehicleAccess: ['VH001']}}` | Own performance | Assigned deliveries | Own profile data |
+| **Customer** | `{businessRole: 'customer', organizationalAccess: {}}` | None | Own deliveries | None |
 
 ### **Database-Specific Security**
 
