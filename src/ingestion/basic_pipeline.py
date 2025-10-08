@@ -97,6 +97,9 @@ class EnrichTelemetryData(beam.DoFn):
             if 'speed_kmh' in element:
                 element['speed_category'] = self._categorize_speed(element['speed_kmh'])
             
+            # Store raw data as JSON string
+            element['raw_data'] = json.dumps(element)
+            
             yield element
             
         except Exception as e:
@@ -135,21 +138,7 @@ class EnrichTelemetryData(beam.DoFn):
 
 def create_bigquery_schema():
     """Create BigQuery schema for telemetry data."""
-    return [
-        {'name': 'timestamp', 'type': 'TIMESTAMP', 'mode': 'REQUIRED'},
-        {'name': 'vehicle_id', 'type': 'STRING', 'mode': 'REQUIRED'},
-        {'name': 'device_type', 'type': 'STRING', 'mode': 'REQUIRED'},
-        {'name': 'latitude', 'type': 'FLOAT', 'mode': 'NULLABLE'},
-        {'name': 'longitude', 'type': 'FLOAT', 'mode': 'NULLABLE'},
-        {'name': 'speed_kmh', 'type': 'FLOAT', 'mode': 'NULLABLE'},
-        {'name': 'fuel_level', 'type': 'FLOAT', 'mode': 'NULLABLE'},
-        {'name': 'engine_status', 'type': 'STRING', 'mode': 'NULLABLE'},
-        {'name': 'processed_at', 'type': 'TIMESTAMP', 'mode': 'REQUIRED'},
-        {'name': 'data_quality_score', 'type': 'FLOAT', 'mode': 'NULLABLE'},
-        {'name': 'location_valid', 'type': 'BOOLEAN', 'mode': 'NULLABLE'},
-        {'name': 'speed_category', 'type': 'STRING', 'mode': 'NULLABLE'},
-        {'name': 'raw_data', 'type': 'JSON', 'mode': 'NULLABLE'},
-    ]
+    return "timestamp:TIMESTAMP,vehicle_id:STRING,device_type:STRING,latitude:FLOAT,longitude:FLOAT,speed_kmh:FLOAT,fuel_level:FLOAT,engine_status:STRING,driver_id:STRING,route_id:STRING,odometer:INTEGER,temperature:INTEGER,generated_at:TIMESTAMP,processed_at:TIMESTAMP,data_quality_score:FLOAT,location_valid:BOOLEAN,speed_category:STRING,raw_data:STRING"
 
 
 def run_pipeline(argv=None):
@@ -220,9 +209,6 @@ def run_pipeline(argv=None):
         enriched_data = (
             parsed_messages.valid
             | 'Enrich Data' >> beam.ParDo(EnrichTelemetryData())
-            | 'Add Raw Data' >> beam.Map(
-                lambda x: {**x, 'raw_data': json.dumps(x)}
-            )
         )
         
         # Write to BigQuery (with windowing for streaming)
@@ -250,11 +236,7 @@ def run_pipeline(argv=None):
             parsed_messages.invalid
             | 'Write Errors to BigQuery' >> beam.io.WriteToBigQuery(
                 table=args.error_table,
-                schema=[
-                    {'name': 'raw_message', 'type': 'STRING', 'mode': 'REQUIRED'},
-                    {'name': 'error', 'type': 'STRING', 'mode': 'REQUIRED'},
-                    {'name': 'processed_at', 'type': 'TIMESTAMP', 'mode': 'REQUIRED'}
-                ],
+                schema="raw_message:STRING,error:STRING,processed_at:TIMESTAMP",
                 create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
                 write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND
             )

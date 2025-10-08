@@ -57,6 +57,7 @@ __pycache__/
 .Python
 .venv/
 venv/
+venv_*/
 env/
 ENV/
 env.bak/

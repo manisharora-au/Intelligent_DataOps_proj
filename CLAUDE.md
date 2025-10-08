@@ -169,4 +169,11 @@ docker-compose down
 - Then, begin working on the todo items, marking them as complete as you go.
 - Please every step of the way just give me a high level explanation of what changes you made
 - Make every task and code change you do as simple as possible. We want to avoid making any massive or complex changes. Every change should impact as little code as possible. Everything is about simplicity.
-- Ensure that there is adequate documentation for the class and any methods / functions introduced to the code base. Thsi documentation should clearly articulate the purpose of the class or the method, function. 
+- Ensure that there is adequate documentation for the class and any methods / functions introduced to the code base. This documentation should clearly articulate the purpose of the class or the method, function.
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+ALL markup files (*.md) must be created in the docs/ folder only, never in other directories. 
