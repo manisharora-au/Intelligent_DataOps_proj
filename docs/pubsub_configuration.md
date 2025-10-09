@@ -117,7 +117,7 @@ Processing Failure → dead-letter topic → error-analysis-subscription → Deb
 
 ## **📊 Message Schema Design**
 
-### **IoT Telemetry Schema published by `test_data_generator.py` and `generate_test_data.sh` to Pub/Sub topic `iot-telemetry`**
+### **IoT Telemetry Schema published by `test_data_generator.py` to Pub/Sub topic `iot-telemetry`**
 ```json
 {
   "vehicle_id": "VH003",
@@ -137,7 +137,7 @@ Processing Failure → dead-letter topic → error-analysis-subscription → Deb
 }
 ```
 
-**Note:** This is the actual schema used by `test_data_generator.py` and `generate_test_data.sh`. The simplified nested structure shown previously was for illustration - the pipeline expects flat JSON structure for BigQuery compatibility.
+**Note:** This is the actual schema used by `test_data_generator.py`. The simplified nested structure shown previously was for illustration - the pipeline expects flat JSON structure for BigQuery compatibility.
 
 ### **Delivery Event Schema**  
 ```json

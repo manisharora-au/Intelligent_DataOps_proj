@@ -64,11 +64,8 @@ mypy .
 source venv_dataops/bin/activate
 export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.gcp/credentials/terraform-dataops-key.json"
 
-# Test shell generator (5 messages)
+# Test data generator (3 messages)
 cd src/ingestion
-./generate_test_data.sh 5
-
-# Test Python generator (3 messages)
 python test_data_generator.py --project manish-sandpit --topic iot-telemetry --batch-size 3
 
 # Verify messages

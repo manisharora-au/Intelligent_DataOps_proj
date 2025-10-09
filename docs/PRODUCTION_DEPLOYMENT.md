@@ -34,13 +34,13 @@ cd src/ingestion
 
 # Deploy to Google Cloud (production)
 ./deploy_pipeline.sh
-```
+
 
 ### 3. Flex Template Deployment (Future)
 
 For production Flex Template deployment:
 
-```bash
+bash
 # Build container image
 gcloud builds submit --config cloudbuild.yaml .
 

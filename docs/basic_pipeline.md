@@ -120,7 +120,7 @@ WriteToBigQuery (Transform)   # Dual table writes
 ### **Upstream Dependencies**
 - **Pub/Sub Topic**: `iot-telemetry` 
 - **Subscription**: `iot-telemetry-subscription`
-- **Data Sources**: `test_data_generator.py`, `generate_test_data.sh`
+- **Data Sources**: `test_data_generator.py`
 
 ### **Downstream Outputs**
 - **Primary Table**: `intelligent_dataops_analytics.iot_telemetry`

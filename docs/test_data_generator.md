@@ -132,7 +132,7 @@ python test_data_generator.py --project manish-sandpit --topic iot-telemetry --c
 - **Issue**: `future.result()` hangs due to gRPC/protobuf conflicts
 - **Solution**: 10-second timeout with graceful error handling
 - **Impact**: Timeout warnings appear but messages publish successfully
-- **Workaround**: Use `generate_test_data.sh` for critical testing
+- **Solution**: Now resolved with Python 3.12 environment (venv_beam_312)
 
 ### **Performance Characteristics**
 - **Success scenario**: Completes in expected time with success messages
@@ -191,9 +191,9 @@ gcloud pubsub subscriptions pull iot-telemetry-subscription --limit=3 --auto-ack
 - **Data pipeline**: Feeds into `basic_pipeline.py` for processing
 
 ### **Alternatives**
-- **Shell script**: `generate_test_data.sh` (gcloud CLI-based)
 - **Production data**: Eventually replaced by real IoT devices
 - **External APIs**: Could integrate with real fleet management systems
+- **Batch testing**: Use test_basic_pipeline.sh for automated pipeline testing
 
 ## **🚀 Future Enhancements**
 
