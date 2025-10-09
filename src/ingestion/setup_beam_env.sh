@@ -2,6 +2,15 @@
 
 # Setup Apache Beam Production Environment
 # Creates Python 3.12 environment specifically for Dataflow pipelines
+# 
+# This script sets up a dedicated environment for Apache Beam development
+# using Python 3.12 and Apache Beam 2.56.0 for stable DirectRunner operation.
+# 
+# Usage: ./setup_beam_env.sh
+#
+# Prerequisites:
+# - Python 3.12 installed (brew install python@3.12)
+# - Git repository with requirements.txt in current directory
 
 PROJECT_ROOT="/Users/manisharora/Projects/Intelligent_DataOps_proj"
 BEAM_ENV_NAME="venv_beam_312"
@@ -40,18 +49,35 @@ source "$BEAM_ENV_PATH/bin/activate"
 echo "⬆️  Upgrading pip..."
 pip install --upgrade pip
 
-# Install Apache Beam and dependencies
+# Install Apache Beam and dependencies from requirements.txt
 echo "📦 Installing Apache Beam and GCP dependencies..."
-pip install apache-beam[gcp]==2.61.0
-pip install google-cloud-pubsub>=2.20.0
-pip install google-cloud-bigquery>=3.25.0
+echo "🔧 Using Apache Beam 2.56.0 for stable DirectRunner (2.61.0+ has PrismRunner issues)"
+pip install -r requirements.txt
 
-# Verify installation
+# Verify installation and DirectRunner functionality
 echo ""
 echo "🧪 Testing Apache Beam installation..."
 python -c "import apache_beam as beam; print(f'✅ Apache Beam {beam.__version__} installed successfully')"
 python -c "from apache_beam.runners.direct.direct_runner import DirectRunner; print('✅ DirectRunner available')"
 python -c "from apache_beam.runners.dataflow.dataflow_runner import DataflowRunner; print('✅ DataflowRunner available')"
+
+# Test that DirectRunner works correctly (not PrismRunner)
+echo ""
+echo "🔍 Verifying DirectRunner functionality..."
+python -c "
+import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
+import os
+os.environ['BEAM_DIRECT_RUNNER_USE_PRISM'] = 'false'
+try:
+    options = PipelineOptions(['--runner=DirectRunner'])
+    with beam.Pipeline(options=options) as p:
+        _ = p | 'Create' >> beam.Create([1, 2, 3]) | 'Sum' >> beam.CombineGlobally(sum)
+    print('✅ DirectRunner test successful - ready for local pipeline testing')
+except Exception as e:
+    print(f'❌ DirectRunner test failed: {e}')
+    exit(1)
+"
 
 echo ""
 echo "✅ Apache Beam environment setup complete!"
@@ -59,5 +85,15 @@ echo ""
 echo "🚀 To use this environment:"
 echo "   source $BEAM_ENV_PATH/bin/activate"
 echo ""
-echo "📝 To update deploy script, use:"
-echo "   PYTHON_CMD=$BEAM_ENV_PATH/bin/python ./deploy_pipeline.sh"
+echo "🧪 To test the pipeline:"
+echo "   ./test_basic_pipeline.sh local 5"
+echo ""
+echo "☁️  To deploy to GCP:"
+echo "   ./deploy_pipeline.sh"
+echo ""
+echo "📋 Environment details:"
+echo "   Python: $(python3.12 --version)"
+echo "   Apache Beam: 2.56.0 (stable DirectRunner)"
+echo "   Virtual Environment: $BEAM_ENV_PATH"
+echo ""
+echo "⚠️  Note: This environment uses Apache Beam 2.56.0 to avoid PrismRunner issues in 2.61.0+"
