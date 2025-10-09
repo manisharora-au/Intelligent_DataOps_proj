@@ -10,7 +10,7 @@
 #
 # Prerequisites:
 # - Python 3.12 installed (brew install python@3.12)
-# - Git repository with requirements.txt in current directory
+# - Git repository with setup.py in current directory
 
 PROJECT_ROOT="/Users/manisharora/Projects/Intelligent_DataOps_proj"
 BEAM_ENV_NAME="venv_beam_312"
@@ -49,10 +49,10 @@ source "$BEAM_ENV_PATH/bin/activate"
 echo "⬆️  Upgrading pip..."
 pip install --upgrade pip
 
-# Install Apache Beam and dependencies from requirements.txt
+# Install Apache Beam and dependencies from setup.py
 echo "📦 Installing Apache Beam and GCP dependencies..."
 echo "🔧 Using Apache Beam 2.56.0 for stable DirectRunner (2.61.0+ has PrismRunner issues)"
-pip install -r requirements.txt
+pip install -e .
 
 # Verify installation and DirectRunner functionality
 echo ""
