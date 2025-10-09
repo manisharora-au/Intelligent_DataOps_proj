@@ -40,7 +40,9 @@ echo "🐍 Using Python: $PYTHON_CMD"
 echo ""
 
 if [ "$MODE" = "local" ]; then
-    echo "Running pipeline locally with DirectRunner..."
+    echo "Running pipeline locally with DirectRunner in streaming mode..."
+    # Force use of legacy DirectRunner instead of PrismRunner
+    export BEAM_DIRECT_RUNNER_USE_PRISM=false
     $PYTHON_CMD basic_pipeline.py \
         --project=$PROJECT_ID \
         --input_subscription=$INPUT_SUBSCRIPTION \
@@ -69,7 +71,7 @@ else
         --num_workers=1 \
         --max_num_workers=1 \
         --autoscaling_algorithm=NONE \
-        --machine_type=n1-standard-1 \
+        --machine_type=e2-micro \
         --disk_size_gb=20 \
         --use_public_ips \
         --experiments=use_runner_v2 \
@@ -80,5 +82,5 @@ else
     echo "Pipeline deployment initiated!"
     echo "Monitor at: https://console.cloud.google.com/dataflow/jobs?project=${PROJECT_ID}"
     echo ""
-    echo "Estimated cost: ~$1-2/hour with 1 fixed worker + Runner V2 optimizations"
+    echo "Estimated cost: ~$0.50-1/hour with 1 e2-micro worker + Runner V2 optimizations"
 fi

@@ -12,7 +12,7 @@ This pipeline demonstrates:
 import argparse
 import json
 import logging 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 import apache_beam as beam
@@ -37,7 +37,7 @@ class ParsePubSubMessage(beam.DoFn):
             message_data = json.loads(element.decode('utf-8'))
             
             # Add processing timestamp
-            message_data['processed_at'] = datetime.utcnow().isoformat()
+            message_data['processed_at'] = datetime.now(timezone.utc).isoformat()
             
             # Validate required fields for IoT telemetry
             required_fields = ['vehicle_id', 'timestamp', 'device_type']
@@ -216,7 +216,7 @@ def run_pipeline(argv=None):
             enriched_data = (
                 enriched_data
                 | 'Window into Fixed Intervals' >> beam.WindowInto(
-                    window.FixedWindows(60)  # 1-minute windows
+                    window.FixedWindows(30)  # 30-second windows for faster testing
                 )
             )
         
