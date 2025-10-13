@@ -73,10 +73,32 @@ gcloud pubsub subscriptions pull iot-telemetry-subscription --limit=3 --auto-ack
 ```
 
 ### GCP Development
-```bash
-# Set up GCP project
-gcloud config set project PROJECT_ID
 
+**Service Account Authentication (REQUIRED for ALL operations):**
+```bash
+# ALWAYS use service account for all GCP operations
+gcloud auth activate-service-account --key-file="$HOME/.gcp/credentials/terraform-dataops-key.json"
+gcloud config set project manish-sandpit
+```
+
+**Infrastructure Deployment:**
+```bash
+# Deploy BigQuery tables and procedures (scripts handle auth automatically)
+cd src/storage/bigquery
+./deploy_all_tables.sh
+./deploy_stored_procedures.sh
+```
+
+**Development and Testing:**
+```bash
+# All development commands use service account
+bq query --use_legacy_sql=false 'SELECT * FROM dataset.table LIMIT 10'
+gcloud dataflow jobs list
+gcloud pubsub topics list
+```
+
+**Application Deployment:**
+```bash
 # Deploy Cloud Functions
 gcloud functions deploy FUNCTION_NAME --runtime python39
 
@@ -85,9 +107,6 @@ gcloud run deploy SERVICE_NAME --image gcr.io/PROJECT_ID/IMAGE_NAME
 
 # Dataflow job
 python -m apache_beam.examples.wordcount --runner DataflowRunner
-
-# BigQuery queries
-bq query --use_legacy_sql=false 'SELECT * FROM dataset.table LIMIT 10'
 ```
 
 ### Docker Development
@@ -158,6 +177,7 @@ docker-compose down
 - Use environment variables for sensitive configuration
 - Implement proper data access controls
 - Encrypt sensitive data at rest and in transit
+- **MANDATORY**: Use service account authentication for ALL GCP operations (no user accounts)
 
 ### Tasks
 - First think through the problem, read the codebase for relevant files, and write a plan to tasks/todo.md.
@@ -167,6 +187,52 @@ docker-compose down
 - Please every step of the way just give me a high level explanation of what changes you made
 - Make every task and code change you do as simple as possible. We want to avoid making any massive or complex changes. Every change should impact as little code as possible. Everything is about simplicity.
 - Ensure that there is adequate documentation for the class and any methods / functions introduced to the code base. This documentation should clearly articulate the purpose of the class or the method, function.
+
+## GCP Command Logging
+
+All GCP commands executed during development and testing must be logged for audit, debugging, and operational tracking purposes.
+
+### Log File Structure
+```
+logs/
+├── gcp-commands-YYYY-MM-DD.log     # Daily command logs
+├── dataflow-jobs-YYYY-MM-DD.log    # Dataflow-specific operations
+└── bigquery-queries-YYYY-MM-DD.log # BigQuery operations
+```
+
+### Logging Format
+Each command must be logged with the following format:
+```
+[YYYY-MM-DD HH:MM:SS] COMMAND_TYPE: <actual_command>
+[YYYY-MM-DD HH:MM:SS] RESULT: <success/failure/output_summary>
+[YYYY-MM-DD HH:MM:SS] CONTEXT: <purpose/script/operation>
+```
+
+### Commands to Log
+- **gcloud**: All gcloud CLI commands (auth, config, deploy, etc.)
+- **bq**: BigQuery operations (queries, schema updates, data loads)
+- **gsutil**: Cloud Storage operations
+- **gcloud dataflow**: Pipeline deployments and management
+- **gcloud builds**: Cloud Build operations
+- **gcloud pubsub**: Pub/Sub topic and subscription management
+
+### Example Log Entries
+```bash
+# Main GCP commands log
+[2025-10-09 14:30:25] GCLOUD: gcloud dataflow jobs run iot-pipeline --gcs-location gs://bucket/template
+[2025-10-09 14:30:45] RESULT: SUCCESS - Job ID: 2025-10-09_06_30_25-12345678901234567
+[2025-10-09 14:30:45] CONTEXT: test_basic_pipeline.sh - GCP pipeline testing
+
+[2025-10-09 14:32:10] BQ: bq query --use_legacy_sql=false "SELECT COUNT(*) FROM dataset.table"
+[2025-10-09 14:32:12] RESULT: SUCCESS - 1,250 records found
+[2025-10-09 14:32:12] CONTEXT: Pipeline verification after test run
+```
+
+### Implementation
+- Add logging to all scripts that execute GCP commands
+- Use `tee` or explicit logging functions in bash scripts
+- Include environment context (local/dev/staging)
+- Log both successful operations and failures with error details
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
